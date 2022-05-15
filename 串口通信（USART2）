@@ -1,0 +1,58 @@
+#include"usart2.h"
+#include"stdio.h"
+#include"sys.h"
+#define ___USART2_H
+#ifndef ___USART2_H
+#endif
+
+
+void USART2_Init(u32 BaudRate)
+{
+ GPIO_InitTypeDef GPIO_InitStrue;	   										                      //使能 GPIO 时钟
+ USART_InitTypeDef USART_InitStrue;
+ NVIC_InitTypeDef NVIC_InitStrue;
+ 
+ 
+ RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);
+ RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+ USART_DeInit(USART2);  													                            //复位串口2 
+ 
+ // 初始化 串口对应IO口  TX-PA2  RX-PA3	 配置TX RX引脚为复用功能
+ GPIO_InitStrue.GPIO_Mode=GPIO_Mode_AF_PP;
+ GPIO_InitStrue.GPIO_Pin=GPIO_Pin_2;
+ GPIO_InitStrue.GPIO_Speed=GPIO_Speed_50MHz;		 						                  //串口复用模式
+ GPIO_Init(GPIOA,&GPIO_InitStrue);
+ 
+ GPIO_InitStrue.GPIO_Mode=GPIO_Mode_IN_FLOATING;
+ GPIO_InitStrue.GPIO_Pin=GPIO_Pin_3;
+  GPIO_Init(GPIOA,&GPIO_InitStrue);
+ 
+ // 初始化 串口模式状态	（USART2）
+ USART_InitStrue.USART_BaudRate=115200; 			                       	        // 波特率
+ USART_InitStrue.USART_HardwareFlowControl=USART_HardwareFlowControl_None; 	  // 硬件流控制
+ USART_InitStrue.USART_Mode=USART_Mode_Tx|USART_Mode_Rx; 					            // 发送 接收 模式
+ USART_InitStrue.USART_Parity=USART_Parity_No; 								                // 无奇偶校验
+ USART_InitStrue.USART_StopBits=USART_StopBits_1; 							              // 一位停止位
+ USART_InitStrue.USART_WordLength=USART_WordLength_8b; 						            // 八位有效数据位
+ USART_Init(USART2,&USART_InitStrue);
+ USART_Cmd(USART2,ENABLE);                   								                  //使能串口
+ USART_ITConfig(USART2,USART_IT_RXNE,ENABLE);								                  //开启接收中断
+ 
+ // 初始化 NVIC中的USART2中断通道
+ NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);							                //选择NVIC组2
+ NVIC_InitStrue.NVIC_IRQChannel=USART2_IRQn;								                  //配置USART为中断源
+ NVIC_InitStrue.NVIC_IRQChannelPreemptionPriority=1;			    		            //抢占优先级为1
+ NVIC_InitStrue.NVIC_IRQChannelSubPriority=1;					    		                //响应优先级为1
+ NVIC_InitStrue.NVIC_IRQChannelCmd=ENABLE;						    		                //使能中断
+ NVIC_Init(&NVIC_InitStrue);									    		                        //初始化配置NVIC
+}
+ 
+ // 串口2中断服务函数
+void USART2_IRQHandler(void)
+{
+ u8 res;
+ if(USART_GetITStatus(USART2,USART_IT_RXNE)) 								                  // 中断标志
+ {
+     res= USART_ReceiveData(USART2);  										                    // 串口2 接收
+     USART_SendData(USART2,res);   											                      // 串口2 发送
+  }
